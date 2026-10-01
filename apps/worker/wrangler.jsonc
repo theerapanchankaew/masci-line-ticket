@@ -1,0 +1,107 @@
+{
+  "name": "masci-ticket-dev",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "masci-ticket-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "EVIDENCE",
+      "bucket_name": "masci-ticket-evidence-dev"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOBS",
+        "queue": "masci-ticket-jobs-dev"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "masci-ticket-jobs-dev",
+        "dead_letter_queue": "masci-ticket-jobs-dlq-dev",
+        "max_retries": 5,
+        "max_batch_size": 1,
+        "max_batch_timeout": 2,
+        "max_concurrency": 4
+      }
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "vars": {
+    "ENVIRONMENT": "development",
+    "DEV_AUTH_ENABLED": "false",
+    "ALLOWED_ORIGIN": "http://localhost:5173",
+    "PORTAL_URL": "http://localhost:5173",
+    "LINE_ACCOUNT_KEY": "REPLACE_BOT_DESTINATION_ID",
+    "L_HARNESS_URL": "https://REPLACE-l-harness.workers.dev",
+    "L_HARNESS_ACCOUNT_ID": "",
+    "RETENTION_DAYS": "0"
+  },
+  "env": {
+    "production": {
+      "name": "masci-ticket",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "masci-ticket",
+          "database_id": "REPLACE_PRODUCTION_D1_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "EVIDENCE",
+          "bucket_name": "masci-ticket-evidence"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "JOBS",
+            "queue": "masci-ticket-jobs"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "masci-ticket-jobs",
+            "dead_letter_queue": "masci-ticket-jobs-dlq",
+            "max_retries": 5,
+            "max_batch_size": 1,
+            "max_batch_timeout": 2,
+            "max_concurrency": 4
+          }
+        ]
+      },
+      "triggers": {
+        "crons": [
+          "* * * * *"
+        ]
+      },
+      "vars": {
+        "ENVIRONMENT": "production",
+        "DEV_AUTH_ENABLED": "false",
+        "ALLOWED_ORIGIN": "https://tickets.example.org",
+        "PORTAL_URL": "https://tickets.example.org",
+        "ACCESS_TEAM_DOMAIN": "REPLACE.cloudflareaccess.com",
+        "ACCESS_AUD": "REPLACE_ACCESS_APPLICATION_AUD",
+        "LINE_ACCOUNT_KEY": "REPLACE_BOT_DESTINATION_ID",
+        "L_HARNESS_URL": "https://REPLACE-l-harness.workers.dev",
+        "L_HARNESS_ACCOUNT_ID": "",
+        "RETENTION_DAYS": "0"
+      }
+    }
+  },
+  "send_metrics": false
+}

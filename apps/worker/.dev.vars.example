@@ -1,0 +1,9 @@
+DEV_AUTH_ENABLED="true"
+# Localhost only; sample SQL creates this actor.
+DEV_STAFF_ID="demo-admin"
+# Live credentials are optional for local UI demo; never commit them.
+L_HARNESS_API_KEY=""
+EMAIL_API_KEY=""
+EMAIL_FROM=""
+
+INTEGRATION_SECRET="local-dev-integration-secret-change-32chars"

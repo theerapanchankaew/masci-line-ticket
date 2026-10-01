@@ -1,0 +1,27 @@
+{
+  "name": "@masci/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8787 --inspector-port 9230",
+    "build": "wrangler deploy --dry-run --outdir dist --env \"\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:demo": "wrangler d1 execute DB --local --file ../../scripts/demo.sql",
+    "deploy": "wrangler deploy --env production"
+  },
+  "dependencies": {
+    "@masci/contracts": "workspace:*",
+    "hono": "^4.6.0",
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260930.2",
+    "wrangler": "^4.0.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  }
+}

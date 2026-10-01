@@ -1,0 +1,29 @@
+{
+  "name": "masci-line-ticket",
+  "version": "0.2.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22.16"
+  },
+  "scripts": {
+    "dev:portal": "pnpm --filter @masci/portal dev",
+    "dev:worker": "pnpm --filter @masci/worker dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @masci/worker test",
+    "db:local": "pnpm --filter @masci/worker db:local",
+    "db:demo": "pnpm --filter @masci/worker db:demo",
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "build:preview": "pnpm --filter @masci/portal build && node scripts/build-preview.mjs",
+    "dev": "node scripts/dev.mjs",
+    "setup:local": "node scripts/setup-local.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "test:edge": "node scripts/test-edge.mjs",
+    "test:preview": "node scripts/test-preview.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "typescript": "^5.9.3"
+  }
+}

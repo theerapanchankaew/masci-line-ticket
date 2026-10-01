@@ -1,0 +1,7 @@
+This distribution includes L Harness by Shudesu, MIT License.
+Source: https://github.com/Shudesu/line-harness-oss
+Pinned commit: 53864603502ae4ccdf350f39a71264b4b41155f2
+Preserved source and license: upstream/l-harness/
+MASCI Ticket integration modifications are recorded in integration/l-harness/patches/.
+The MASCI extension is also distributed under the MIT license in LICENSE.
+No endorsement by the upstream author is implied.

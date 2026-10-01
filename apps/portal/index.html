@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#f6f7fb"/>
+  <title>MASCI LINE Ticket</title>
+</head>
+<body>
+  <div id="root">
+    <main style="max-width:760px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif;line-height:1.7;color:#172b4d">
+      <h1>MASCI LINE Ticket</h1>
+      <p>กำลังเปิดแอป… หากข้อความนี้ยังแสดงอยู่ ให้ตรวจวิธีเปิดด้านล่าง</p>
+      <p><strong>ดูหน้าจอโดยไม่ติดตั้ง:</strong> เปิดไฟล์ <code>preview.html</code> ในโฟลเดอร์หลักของโปรเจกต์ (ใช้ข้อมูลตัวอย่าง อ่านอย่างเดียว)</p>
+      <p><strong>รันระบบในเครื่อง:</strong> ไฟล์นี้ใช้ React/TypeScript และต้องรันผ่าน Vite พร้อม Worker API</p>
+      <pre style="background:#f1f5f9;padding:18px;overflow:auto">pnpm install --frozen-lockfile
+pnpm setup:local
+pnpm dev</pre>
+      <p>คำสั่ง setup สร้าง local environment และฐานข้อมูล demo ให้แล้ว จากนั้นเข้า <strong>http://localhost:5173</strong></p>
+      <noscript>กรุณาเปิด JavaScript ในเบราว์เซอร์เพื่อใช้งานระบบ</noscript>
+    </main>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
