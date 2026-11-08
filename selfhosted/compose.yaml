@@ -1,0 +1,110 @@
+name: masci-service-desk
+x-app: &app
+  build: ./backend
+  image: masci-desk-api:${RELEASE:-local}
+  restart: unless-stopped
+  init: true
+  environment: &app-env
+    DATABASE_URL_FILE: /run/secrets/database_url
+    LINE_CHANNEL_SECRET_FILE: /run/secrets/line_secret
+    LINE_CHANNEL_ACCESS_TOKEN_FILE: /run/secrets/line_token
+    LINE_DESTINATION: ${LINE_DESTINATION:-}
+    LINE_MODE: ${LINE_MODE:-dry_run}
+    APP_ENV: ${APP_ENV:-development}
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+    UPLOAD_DIR: /data/uploads
+  secrets: [database_url, line_secret, line_token]
+  volumes: [uploads:/data/uploads]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  logging: &logging
+    driver: json-file
+    options: {max-size: '10m', max-file: '3'}
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: desk
+      POSTGRES_USER: desk
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_password
+    secrets: [database_password]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U desk -d desk']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logging
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [alembic, upgrade, head]
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    <<: *app
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    <<: *app
+    command: [python, -m, app.cli, worker]
+    healthcheck:
+      test: [CMD, python, -m, app.health, worker]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      api: {condition: service_healthy}
+  scheduler:
+    <<: *app
+    command: [python, -m, app.cli, scheduler]
+    healthcheck:
+      test: [CMD, python, -m, app.health, scheduler]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      api: {condition: service_healthy}
+  web:
+    build: ./web
+    image: masci-desk-web:${RELEASE:-local}
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: *logging
+  gateway:
+    image: nginxinc/nginx-unprivileged:stable-alpine
+    restart: unless-stopped
+    ports: ['127.0.0.1:${HTTP_PORT:-8080}:8080']
+    volumes: ['./infra/gateway.conf:/etc/nginx/conf.d/default.conf:ro']
+    depends_on:
+      api: {condition: service_healthy}
+      web: {condition: service_started}
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: *logging
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: [tunnel]
+    command: [tunnel, --no-autoupdate, run, --token-file, /run/secrets/tunnel_token]
+    secrets: [tunnel_token]
+    depends_on: [gateway]
+    logging: *logging
+volumes:
+  pgdata:
+  uploads:
+secrets:
+  database_password: {file: ./secrets/database_password}
+  database_url: {file: ./secrets/database_url}
+  line_secret: {file: ./secrets/line_secret}
+  line_token: {file: ./secrets/line_token}
+  tunnel_token: {file: ./secrets/tunnel_token}
