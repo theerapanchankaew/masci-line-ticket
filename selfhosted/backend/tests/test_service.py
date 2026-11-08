@@ -423,3 +423,41 @@ def test_triage_time_included_in_sla(env):
         db.flush()
         t = create_ticket(db, "admin", [m.id], "late triage", env["ids"]["team"], env["ids"]["policy"], 2)
         assert abs(t.response_due - (m.created_at + 3600)) < 1
+
+
+def test_expired_retry_window_never_resends(env):
+    open_ticket(env)
+    with env["db"].begin() as db:
+        row = db.scalar(select(Outbox))
+        row.created_at = time.time() - 25 * 3600
+        row.attempts = 1
+    client = httpx.Client(transport=httpx.MockTransport(lambda req: pytest.fail("expired retry must not be sent")))
+    send_outbox_once(env["db"], SimpleNamespace(line_mode="live", line_token="x"), client)
+    with env["db"]() as db:
+        assert db.scalar(select(Outbox)).error == "RETRY_WINDOW_REQUIRES_RECONCILIATION"
+
+
+def test_admin_can_pause_agent_and_reset_revokes_session(env):
+    c, admin, agent = env["client"], env["auth"](), env["auth"]("agent")
+    agent_id = env["ids"]["agent"]
+    assert c.patch("/api/admin/users/" + agent_id, headers=admin, json={"available": False}).status_code == 200
+    tid = open_ticket(env)
+    with env["db"].begin() as db:
+        assert dispatch_ticket(db, db.get(Ticket, tid), "scheduler", automatic=True) is None
+    assert (
+        c.patch(
+            "/api/admin/users/" + agent_id, headers=admin, json={"password": "new-password-long-enough"}
+        ).status_code
+        == 200
+    )
+    assert c.get("/api/me", headers=agent).status_code == 401
+
+
+def test_reply_request_idempotency(env):
+    tid = open_ticket(env)
+    c, h = env["client"], {**env["auth"](), "Idempotency-Key": "same-reply-key"}
+    first = c.post("/api/tickets/" + tid + "/reply", headers=h, json={"text": "checking"})
+    assert first.status_code == 200
+    second = c.post("/api/tickets/" + tid + "/reply", headers=h, json={"text": "checking"})
+    assert first.json()["id"] == second.json()["id"]
+    assert c.post("/api/tickets/" + tid + "/reply", headers=h, json={"text": "different"}).status_code == 409

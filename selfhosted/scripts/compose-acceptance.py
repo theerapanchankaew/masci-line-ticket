@@ -61,3 +61,39 @@ assert any(m["text"] == "CI backup acceptance" for m in inbox)
 print(
     "Compose acceptance: auth -> signed webhook -> persistent inbox -> worker -> staff API passed"
 )
+catalog = request("/api/catalog", token=token)
+command = {
+    "message_ids": [inbox[0]["id"]],
+    "title": "CI recovery acceptance",
+    "team_id": catalog["teams"][0]["id"],
+    "policy_id": catalog["policies"][0]["id"],
+    "priority": 3,
+    "reason": "CI disposable test",
+}
+raw = json.dumps(command).encode()
+req = urllib.request.Request(
+    "http://localhost:8000/api/tickets",
+    data=raw,
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token,
+        "Idempotency-Key": "ci-ticket-command-1",
+    },
+)
+ticket = json.load(urllib.request.urlopen(req))
+boundary = "masci-ci-boundary"
+file_body = (
+    f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="proof.txt"\r\nContent-Type: text/plain\r\n\r\n'
+    + "MASCI-BACKUP-PROOF"
+    + f"\r\n--{boundary}--\r\n"
+).encode()
+req = urllib.request.Request(
+    f"http://localhost:8000/api/tickets/{ticket['id']}/attachments",
+    data=file_body,
+    headers={
+        "Content-Type": "multipart/form-data; boundary=" + boundary,
+        "Authorization": "Bearer " + token,
+    },
+)
+assert json.load(urllib.request.urlopen(req))["size"] == len(b"MASCI-BACKUP-PROOF")
+print("Compose acceptance: ticket creation and protected attachment upload passed")

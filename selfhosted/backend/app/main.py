@@ -368,6 +368,8 @@ def reply(
     key = "reply:" + user.id + ":" + idempotency_key
     existing = db.scalar(select(Outbox).where(Outbox.request_key == key))
     content = [{"type": "text", "text": f"{ticket.number}: {body.text}"}]
+    if len(content[0]["text"]) > 5000:
+        raise HTTPException(422, "ข้อความรวมเลข Ticket ต้องไม่เกิน 5000 ตัวอักษร")
     if existing:
         if existing.ticket_id != ticket.id or existing.messages != content:
             raise HTTPException(409, "Idempotency key conflicts")

@@ -76,10 +76,11 @@ jobs:
         run: |
           bash scripts/backup.sh
           backup_path="$(find backups -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+          docker compose exec -T api python -c "from app.db import Session,settings; from app.models import Message,Attachment; from sqlalchemy import select; db=Session(); m=db.scalar(select(Message).where(Message.line_message_id=='ci-message-1')); m.text='AFTER_BACKUP'; a=db.scalar(select(Attachment)); (settings.uploads/a.storage_key).write_bytes(b'AFTER_BACKUP'); db.commit()"
           bash scripts/restore.sh "$backup_path" --confirm-replace
           docker compose up -d --wait --wait-timeout 180
           bash scripts/smoke-test.sh
-          docker compose exec -T api python -c "from app.db import Session; from app.models import Message; from sqlalchemy import select; db=Session(); assert db.scalar(select(Message).where(Message.line_message_id=='ci-message-1')) is not None; print('Restored message verified')"
+          docker compose exec -T api python -c "from app.db import Session; from app.models import Message; from sqlalchemy import select; db=Session(); assert db.scalar(select(Message).where(Message.line_message_id=='ci-message-1')).text=='CI backup acceptance'; from app.models import Attachment; from app.db import settings; a=db.scalar(select(Attachment)); assert (settings.uploads/a.storage_key).read_bytes()==b'MASCI-BACKUP-PROOF'; print('Restored database and file content verified')"
       - name: Failure logs
         if: failure()
         working-directory: selfhosted

@@ -128,10 +128,13 @@ def send_outbox_once(factory=Session, cfg=settings, client=None):
         if not row:
             return False
         if row.kind == "resolution" and row.ticket_id:
-            ticket = db.get(Ticket, row.ticket_id)
+            ticket = db.get(Ticket, row.ticket_id, with_for_update=True)
             if not ticket or ticket.status != "resolved" or row.request_key != f"resolve:{ticket.id}:{ticket.round}":
                 row.state, row.error = "superseded", "RESOLUTION_NO_LONGER_CURRENT"
                 return True
+        if row.attempts and time.time() - row.created_at >= 20 * 3600:
+            row.state, row.error = "failed", "RETRY_WINDOW_REQUIRES_RECONCILIATION"
+            return True
         row.attempts += 1
         if cfg.line_mode == "dry_run":
             row.state = "simulated"
