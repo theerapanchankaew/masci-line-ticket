@@ -127,3 +127,7 @@ Backup มีช่วงหยุดรับงานสั้น ๆ เพ�
 - ไม่มีการย้ายข้อมูลจากระบบ Cloudflare เดิมโดยอัตโนมัติ
 
 อ่าน [ARCHITECTURE.md](docs/ARCHITECTURE.md) และ [ACCEPTANCE.md](docs/ACCEPTANCE.md) เพื่อประเมินความพร้อมก่อนใช้ข้อมูลจริง
+
+## Fonts
+
+Noto Sans Thai is bundled with the frontend for local serving, with no Google Fonts request at runtime. Its SIL Open Font License is included at `web/public/licenses/NotoSansThai-OFL.txt` and served at `/licenses/NotoSansThai-OFL.txt`.

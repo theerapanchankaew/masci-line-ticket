@@ -1,3 +1,7 @@
+import "@fontsource/noto-sans-thai/400.css";
+import "@fontsource/noto-sans-thai/500.css";
+import "@fontsource/noto-sans-thai/600.css";
+import "@fontsource/noto-sans-thai/700.css";
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { api, setToken, fmt, deadline, downloadFile } from "./api";
