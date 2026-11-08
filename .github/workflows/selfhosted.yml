@@ -1,0 +1,91 @@
+name: Self-hosted Service Desk
+on:
+  push:
+    paths: ['selfhosted/**', '.github/workflows/selfhosted.yml']
+  pull_request:
+    paths: ['selfhosted/**', '.github/workflows/selfhosted.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-and-web:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: desk
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: desk_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U desk -d desk_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: selfhosted/backend/requirements.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: selfhosted/web/package-lock.json
+      - name: Backend lint and PostgreSQL tests
+        working-directory: selfhosted/backend
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://desk:ci-only-password@localhost:5432/desk_test
+        run: |
+          pip install -r requirements.lock
+          ruff check .
+          pytest -q
+      - name: Migration and readiness acceptance
+        working-directory: selfhosted/backend
+        env:
+          DATABASE_URL: postgresql+psycopg://desk:ci-only-password@localhost:5432/desk_test
+        run: |
+          alembic upgrade head
+          python -c "from fastapi.testclient import TestClient; from app.main import app; r=TestClient(app).get('/health/ready'); assert r.status_code==200,r.text"
+      - name: Frontend test and production build
+        working-directory: selfhosted/web
+        run: |
+          npm ci
+          npm test
+          npm run build
+  compose-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run the complete stack
+        working-directory: selfhosted
+        run: |
+          python3 scripts/init.py
+          chmod u+w secrets/line_secret
+          printf '%s' 'ci-only-line-secret' > secrets/line_secret
+          chmod 444 secrets/line_secret
+          printf '\nLINE_DESTINATION=U-ci-bot\n' >> .env
+          docker compose config --quiet
+          docker compose up -d --build --wait --wait-timeout 240
+          docker compose run --rm -T -e BOOTSTRAP_PASSWORD=ci-test-password-1234 api python -m app.cli bootstrap --email ci@example.org
+          docker compose exec -T api python - < scripts/compose-acceptance.py
+          bash scripts/smoke-test.sh
+      - name: Backup and restore acceptance
+        working-directory: selfhosted
+        run: |
+          bash scripts/backup.sh
+          backup_path="$(find backups -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+          docker compose exec -T api python -c "from app.db import Session,settings; from app.models import Message,Attachment; from sqlalchemy import select; db=Session(); m=db.scalar(select(Message).where(Message.line_message_id=='ci-message-1')); m.text='AFTER_BACKUP'; a=db.scalar(select(Attachment)); (settings.uploads/a.storage_key).write_bytes(b'AFTER_BACKUP'); db.commit()"
+          bash scripts/restore.sh "$backup_path" --confirm-replace
+          docker compose up -d --wait --wait-timeout 180
+          bash scripts/smoke-test.sh
+          docker compose exec -T api python -c "from app.db import Session; from app.models import Message; from sqlalchemy import select; db=Session(); assert db.scalar(select(Message).where(Message.line_message_id=='ci-message-1')).text=='CI backup acceptance'; from app.models import Attachment; from app.db import settings; a=db.scalar(select(Attachment)); assert (settings.uploads/a.storage_key).read_bytes()==b'MASCI-BACKUP-PROOF'; print('Restored database and file content verified')"
+      - name: Failure logs
+        if: failure()
+        working-directory: selfhosted
+        run: docker compose logs --tail=150
+      - name: Stop disposable stack
+        if: always()
+        working-directory: selfhosted
+        run: docker compose down -v

@@ -1,5 +1,7 @@
 # MASCI LINE Ticket v0.2
 
+> **Mini PC / Docker / PostgreSQL:** ดู [Self-hosted Service Desk](selfhosted/README.md) ซึ่งเป็น stack แยกสำหรับ LINE OA โดยตรง พร้อม Mapping, Dispatch, Tasks และ SLA. รุ่น Cloudflare ด้านล่างยังคงใช้งานตามเดิม.
+
 รับข้อความจาก LINE OA เป็น Ticket พร้อมคิวงาน, เจ้าหน้าที่รับผิดชอบ, SLA, บันทึกภายใน, หลักฐาน และประวัติการดำเนินการ ส่งคำตอบผ่าน L Harness Proxy และใช้ Cloudflare D1/R2/Queues.
 
 ## เปิดดูหน้าจอทันที
